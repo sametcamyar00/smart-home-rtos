@@ -45,5 +45,13 @@ The system features a live web dashboard running on port `5000` that provides:
 
 **1. Hardware Daemon Setup:**
 ```bash
+
+gcc -o smart_home main.c -lpigpio -lpthread -lrt
+# Terminal 1: Start the AI Web Dashboard
+sudo python3 camera.py
+
+# Terminal 2: Start the RTOS Hardware Controller
+sudo ./smart_home
+
 sudo apt-get install pigpio python3-pigpio python3-picamera2 python3-opencv python3-psutil python3-flask
 sudo systemctl enable pigpiod
