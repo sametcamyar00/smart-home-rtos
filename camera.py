@@ -30,7 +30,6 @@ def get_state():
 # --- SİSTEM PARAMETRELERİNİ OKUMA FONKSİYONU ---
 def get_pi_temp():
     try:
-        # Raspberry Pi'nin donanımsal sicaklik sensorunu okur
         with open("/sys/class/thermal/thermal_zone0/temp", "r") as f:
             return round(int(f.read()) / 1000.0, 1)
     except:
@@ -38,11 +37,15 @@ def get_pi_temp():
 
 @app.route('/stats')
 def stats():
-    # Arayuzdeki grafiklerin cektigi canli JSON verisi
+    cpu_usage = psutil.cpu_percent(interval=None)
+    # RPi için basit bir güç tüketim simülasyonu (Boşta 3.0W, %100 yükte 6.5W)
+    estimated_power = 3.0 + (cpu_usage / 100.0) * 3.5 
+    
     return jsonify({
-        'cpu': psutil.cpu_percent(interval=None),
+        'cpu': cpu_usage,
         'ram': psutil.virtual_memory().percent,
-        'temp': get_pi_temp()
+        'temp': get_pi_temp(),
+        'power': round(estimated_power, 2)
     })
 
 def generate_frames():
@@ -117,14 +120,15 @@ def index():
             .container { display: flex; justify-content: center; gap: 30px; margin-top: 20px; flex-wrap: wrap; }
             .camera-box { background: #2d2d2d; padding: 15px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
             .camera-box img { width: 640px; border-radius: 5px; border: 2px solid #555; }
-            .stats-box { width: 400px; background: #2d2d2d; padding: 20px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-            .metric-cards { display: flex; justify-content: space-between; margin-bottom: 20px; }
-            .card { background: #3d3d3d; padding: 15px; border-radius: 8px; width: 30%; text-align: center; font-weight: bold; border-bottom: 4px solid #4CAF50; }
+            .stats-box { width: 450px; background: #2d2d2d; padding: 20px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+            .metric-cards { display: flex; justify-content: space-between; margin-bottom: 20px; gap: 10px; }
+            .card { background: #3d3d3d; padding: 12px 5px; border-radius: 8px; width: 23%; text-align: center; font-weight: bold; border-bottom: 4px solid #4CAF50; font-size: 14px; }
             .card.cpu { border-color: #ff6384; }
             .card.ram { border-color: #36a2eb; }
             .card.temp { border-color: #ffce56; }
-            .card span { display: block; font-size: 24px; margin-top: 5px; }
-            canvas { background: #3d3d3d; border-radius: 8px; padding: 10px; }
+            .card.power { border-color: #a29bfe; }
+            .card span { display: block; font-size: 20px; margin-top: 5px; }
+            canvas { background: #3d3d3d; border-radius: 8px; padding: 10px; width: 100%; }
         </style>
     </head>
     <body>
@@ -141,6 +145,7 @@ def index():
                     <div class="card cpu">CPU <span id="val-cpu">0%</span></div>
                     <div class="card ram">RAM <span id="val-ram">0%</span></div>
                     <div class="card temp">ISI <span id="val-temp">0°C</span></div>
+                    <div class="card power">GUC <span id="val-power">0 W</span></div>
                 </div>
                 <canvas id="sysChart" width="400" height="250"></canvas>
             </div>
@@ -178,6 +183,7 @@ def index():
                         document.getElementById('val-cpu').innerText = data.cpu + '%';
                         document.getElementById('val-ram').innerText = data.ram + '%';
                         document.getElementById('val-temp').innerText = data.temp + '°C';
+                        document.getElementById('val-power').innerText = data.power + ' W';
 
                         // Zamani al
                         const now = new Date();
